@@ -3180,6 +3180,15 @@ def test_concatenate3_promotes_dtype_across_blocks():
     assert_eq(result, np.concatenate([b, a]))
 
 
+def test_concatenate3_keeps_first_dtype_when_promotion_is_undefined():
+    # differing structured dtypes cannot be combined, so fall back to allocating
+    # with the first block's dtype instead of raising
+    a = np.array([(1,)], dtype=[("a", "i4")])
+    b = np.array([(2,)], dtype=[("b", "i4")])
+    assert_eq(concatenate3([a, b]), np.array([(1,), (2,)], dtype=[("a", "i4")]))
+
+
+@pytest.mark.skipif(not NUMPY_GE_200, reason="np.strings requires NumPy 2.0")
 def test_compute_keeps_string_values_longer_than_first_block():
     # https://github.com/dask/dask/issues/12684
     # np.strings.zfill sizes its output per block, so block 0 may come back as

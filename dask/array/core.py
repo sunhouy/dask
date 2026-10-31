@@ -5696,7 +5696,13 @@ def concatenate3(arrays):
         # only promote when the blocks actually disagree; np.result_type rebuilds
         # structured dtypes and would drop field offsets that way
         if any(arr.dtype != first for arr in leaves[1:]):
-            dtype_ = np.result_type(*(arr.dtype for arr in leaves))
+            try:
+                dtype_ = np.result_type(*(arr.dtype for arr in leaves))
+            except TypeError:
+                # Promotion is not defined for every mix of dtypes (structured
+                # dtypes with different fields, for instance). Keep allocating
+                # with the first block's dtype, as we did before.
+                pass
 
     result = np.empty(shape=shape, dtype=dtype_)
 
