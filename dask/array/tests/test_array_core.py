@@ -3188,13 +3188,17 @@ def test_concatenate3_keeps_first_dtype_when_promotion_is_undefined():
     assert_eq(concatenate3([a, b]), np.array([(1,), (2,)], dtype=[("a", "i4")]))
 
 
-@pytest.mark.skipif(not NUMPY_GE_200, reason="np.strings requires NumPy 2.0")
+def _zfill_each_block(block):
+    # a block-wise function may size its output from its own data, so block 0 can
+    # come back as <U4 while block 1 is <U8 even though the array declares <U8
+    text = block[0]
+    return np.array([text.zfill(4)], dtype=f"<U{max(4, len(text))}")
+
+
 def test_compute_keeps_string_values_longer_than_first_block():
     # https://github.com/dask/dask/issues/12684
-    # np.strings.zfill sizes its output per block, so block 0 may come back as
-    # <U4 while block 1 is <U8 even though the array declares <U8
     x = da.from_array(np.array(["ab", "abcdefgh"]), chunks=1)
-    y = x.map_blocks(lambda block: np.strings.zfill(block, 4), dtype="<U8")
+    y = x.map_blocks(_zfill_each_block, dtype="<U8")
 
     blocks = [block.compute() for block in y.blocks]
     assert blocks[0].dtype == np.dtype("<U4")
